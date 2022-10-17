@@ -1,9 +1,16 @@
-from os.path import isfile,join
+from os.path import isfile,join,getctime
 from os import listdir,mkdir
 from datetime import date
 from random import randint
 
 sessions_path = "/home/gsd/.sessions/"
+notes_path = "/home/gsd/.nb/home/"
+ctime_cookie_file = "/home/gsd/.config/sessions/cookie"
+def get_new_notes(files):
+    last_ctime = open(ctime_cookie_file, 'r').read()
+    for file in files:
+       ... 
+
 def gen_data():
     for i in range(20):
         day = randint(1,31)
@@ -35,3 +42,7 @@ for session in session_files:
 # TODO Informs user of the notes that aren't in the system
 if today not in session_files:
     print("[+] today's session does not exists yet, creating from new notes...")
+    generate_new_notes()
+# TODO Get new notes
+# TODO Run the session
+# TODO Update the note value at each new note
