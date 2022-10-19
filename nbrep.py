@@ -1,16 +1,37 @@
 from os.path import isfile,join,getctime
 from os import listdir,mkdir
+from os import name as pname
 from datetime import date
 from random import randint
 
+if pname not in  ['Linux', 'posix']:
+    print("This script is not (yet) running on other systems than Linux !")
+    print(pname)
+    exit()
+
 sessions_path = "/home/gsd/.sessions/"
 notes_path = "/home/gsd/.nb/home/"
-ctime_cookie_file = "/home/gsd/.config/sessions/cookie"
-def get_new_notes(files):
-    last_ctime = open(ctime_cookie_file, 'r').read()
-    for file in files:
-       ... 
+list_known_files = "/home/gsd/.config/sessions/cookie"
+# TODO Add notes based on the getctime value 
 
+
+"""
+    Get the list of notes that are not in the review process and return the list of 
+    n of those notes ; adding them to the system
+"""
+def get_new_notes(files, n : int):
+    res = []
+    with open(list_known_files, 'r+') as known_file:
+        content = known_file.read()
+        for f in files:
+            if f not in content:
+                print("[+] Adding new file to note")
+                res.append(f)
+                known_file.write(f+'\n')
+                if len(res) == n or len(res) == 10:
+                    return res
+        return res
+            
 def gen_data():
     for i in range(20):
         day = randint(1,31)
@@ -29,20 +50,18 @@ except FileNotFoundError:
     print("[!] directory does not exists on path yet, creating it...")
     mkdir(sessions_path)
 session_files = [f for f in listdir(sessions_path) if isfile(join(sessions_path, f))]
+notes = [f for f in listdir(notes_path) if isfile(join(notes_path, f))]
 for session in session_files:
     month = session.split('_')[1]
     day = session.split('_')[0]
-    if int(month) >= int(today_month):
-        if int(day) >= int(today_day):
-            pass
-    else:
-        # TODO Informs user and add one week to system
-        print('old file !')
-# prev_sessions = [f for f in sessions_files ]
-# TODO Informs user of the notes that aren't in the system
+    # TODO Informs user and add one week to system
+    if int(month) <= int(today_month):
+       if int(day) >= int(today_day):
+            continue
+       # print("month : ",month,"/",today_month," ",day,"/",today_day)
 if today not in session_files:
     print("[+] today's session does not exists yet, creating from new notes...")
-    generate_new_notes()
+    # get_new_notes(notes, 7)
 # TODO Get new notes
 # TODO Run the session
 # TODO Update the note value at each new note
