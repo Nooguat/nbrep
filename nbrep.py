@@ -1,103 +1,100 @@
-from os.path import isfile,join,getctime
-from os import listdir,mkdir,system
-from os import name as pname
+import os
 from datetime import date,datetime
 from random import randint
 
-speed_date_link = []
+# TODO Implement the read_cfg fonction
+sessions = "/home/gsd/.sessions"
+notes_dir = "/home/gsd/.nb/home/"
+# Each line of the session file is made as filename:date:nb_rev_done:cur_speed
 
-if pname not in  ['Linux', 'posix']:
-    print("This script is not (yet) running on other systems than Linux !")
-    print(pname)
-    exit()
+if os.name not in ['Linux', 'posix']:
+    print('This script does not (yet) support other OS than Linux')
+    raise OSError    
+"""
+    Return array with values from the config file if key is NULL, else return the value 
+    linked to given key
+"""
+def read_cfg(key):
+    ...
+    
+"""
+    Return datetime object from delta added
+"""
+def compute_date(date_value, offset):
+    date = datetime.strptime(date_value, "%d_%m")
+    date = date + datime.timedelta(offset)
+    # TODO Remove debug
+    print(date)
+    return date
+# TODO Implement the read_cfg function
 
-sessions_path = "/home/gsd/.sessions/"
-notes_path = "/home/gsd/.nb/home/"
-list_known_files = "/home/gsd/.config/sessions/cookie"
-# TODO Add notes based on the getctime value 
+"""
+    Return a factor based on how well the note was understood
+"""
+
+def get_understanding():
+    respond = input("How well did you understood the note ? ")
+    # TODO Implement the read_cfg function
+    if respond in ['g', 'good', 'G']:
+        return 2
+    elif respond in ['o', 'ok','O']:
+        return 1.5
+    elif respond in ['b', 'B', 'bad']:
+        return 1.25
+    else:
+        print("Sorry, input is invalid. Try o,b or g")
+        # TODO Find a better way, unsure of behaviour is called too many times
+        get_understanding()
+
+"""
+    Return n new notes from the vault
+"""
+def add_note():
+    ...
 
 
+"""
+    Generate a new speed value based on the current speed, comprehension of user and how much 
+    time this note has been reviewed. Not using a real algorithm for the moment
+"""
+def update_speed(cur_speed, nb_rep, compr_ratio):
+    # TODO Work on a real algorithm
+    return cur_speed * ( compr_ratio // (5/nb_rep))
 
-def compute_date(date, speed, understood):
-    # TODO Find a way to tell it note has been graphed
-    if speed == -1:
-        speed = 1000
-    new_rev = datetime.strptime(date, "%d_%m")
-    new_speed = speed*understood
-    nb_days = round(new_speed / 100) # Very approx, will need some tweaking
-    print(nb_days)
-    new_rev = new_rev + datetime.timedelta(days=nb_days)
-    res = new_rev.strftime("%d_%m")
-    res = res + ':' + new_speed
+
+"""
+    Returns array of notes that needs to be review on that date or previously
+"""
+def get_review_notes(notes, date):
+    res = []
+    for note in notes:
+        note_date = datetime.strptime(note.split(':')[1], "%d_%m")
+        # TODO Notes before the current time should be splitted along the next way
+        if note_date <= date:
+            res.append(note)
     return res
 
 """
-    Get the list of notes that are not in the review process and return the list of 
-    n of those notes ; adding them to the system
-"""
-def get_new_notes(files, n : int):
-    res = []
-    with open(list_known_files, 'r+') as known_file:
-        content = known_file.read()
-        for f in files:
-            if f not in content:
-                print("[+] Adding new file to note")
-                res.append(f)
-                known_file.write(f+'\n')
-                if len(res) == n or len(res) == 10:
-                    return res
-        return res
-            
-def gen_data():
-    for i in range(20):
-        day = randint(1,31)
-        month = randint(1,12)
-        file_name = ''.join([sessions_path, str(day), '_', str(month)])
-        print(file_name)
-        f = open(file_name, 'w')
-        f.write('TOREMOVE')
-        f.close()        
-today_day = date.today().strftime("%d")
-today_month = date.today().strftime("%m")
-today = today_day + "_" + today_month
-try:
-    listdir(sessions_path)
-except FileNotFoundError:
-    print("[!] directory does not exists on path yet, creating it...")
-    mkdir(sessions_path)
-session_files = [f for f in listdir(sessions_path) if isfile(join(sessions_path, f))]
-notes = [f for f in listdir(notes_path) if isfile(join(notes_path, f))]
-for session in session_files:
-    month = session.split('_')[1]
-    day = session.split('_')[0]
-    # TODO Informs user and add one month after current month to system
-    if int(month) <= int(today_month):
-       if int(day) >= int(today_day):
-            continue
-         # TODO Implement menu 
-         # print("[!] Found a session file older than today. What do you want to do with that ?")       
-       # print("month : ",month,"/",today_month," ",day,"/",today_day)
-# if today not in session_files:
-#     print("[+] today's session does not exists yet, creating from new notes...")
-    # get_new_notes(notes, 7)
-# TODO Run the session
-with open(sessions_path+today, 'r+') as cur_review:
-    for line in cur_review.readlines():
-        note = notes_path+line.split(":")[0]
-        # TODO Check that the file still exists in filesystem
-        speed = line.split(":")[1]
-        if speed == -1:
-            print("[!] This note has been enough reviewed using dynamic reading")
-            print("[+] Now try to graph your knowledge about : ", note)
-        else:
-            command = "speedread " + note + " -w " + speed
-            system(command)
-        i = input("[?] Did you understood the note content ? ")
-        if i not in ["y", "Y", "n", "N"]:
-            i = input("[?] Did you understood the note content ? ")
-        # TODO Algorithm to determine next review date
-        if i == 'y' or i == 'Y':
-            res = compute_date(cur_review, speed, 2)
-        else:
-            res = compute_date(cur_review, speed, 1.25)
-# TODO Update the note value at each new note
+    Controls the daily session. Takes an array of notes in argument and read them one by one
+"""    
+def session(notes, session_file):
+    for note in notes:
+        values = note.split(':')
+        # TODO Replace 5 by value in config
+        if values[2] >= 5:
+            print("This note has been reviewed a lot ! Please update knowledge graph when review is finished")
+        speed = values[3]
+        file = values[0]
+        command = "speedread " + file + " -w " + speed
+        os.system(command)
+        speed = update_speed(speed, values[2], get_understanding())
+        # TODO Create real model
+        date = compute_date(values[1], (values[2]//10)*13)
+        # TODO Find how the session file is updated with those new values + removing the one before
+
+if __name__ == "__main__":
+    # read_cfg
+    with session_file as open(sessions, 'r+'):
+        session(get_review_notes(session_file.read(), date.today(), session_file)
+
+        
