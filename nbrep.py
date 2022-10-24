@@ -1,5 +1,5 @@
 import os
-from datetime import date,datetime
+from datetime import date,datetime,timedelta
 from random import randint
 
 # TODO Implement the read_cfg fonction
@@ -22,9 +22,8 @@ def read_cfg(key):
 """
 def compute_date(date_value, offset):
     date = datetime.strptime(date_value, "%d_%m_%y")
-    date = date + datime.timedelta(offset)
+    date = date + timedelta(offset)
     # TODO Remove debug
-    print(date)
     return date
 # TODO Implement the read_cfg function
 
@@ -104,7 +103,6 @@ def get_review_notes(notes, date):
     Controls the daily session. Takes an array of notes in argument and read them one by one
 """    
 def session(notes_index, session_file):
-    print(session_file)
     for index in notes_index:
         print(session_file[index])
         values = session_file[index].split(':')
@@ -117,13 +115,14 @@ def session(notes_index, session_file):
             print("This note has been reviewed a lot ! Please update knowledge graph when review is finished")
 
         command = "speedread " + notes_dir + file + " -w " + speed
-        os.system(command)
-        nbr_seen += 1
+        # os.system(command)
+        nbr_seen = str(int(nbr_seen) + 1)
         speed = update_speed(speed, nbr_seen, get_understanding())
         # TODO Create real model
-        date = compute_date(date, (nbr_seen//10)*13).strftime("%d_%m")
+        date = compute_date(date, (int(nbr_seen)//10)*13).strftime("%d_%m_%y")
         # TODO Find how the session file is updated with those new values + removing the one before
         n_review = ':'.join([file, date,nbr_seen, ])
+        print(n_review)
         session_file[index] = n_review
     print("Review is done for today !")
     return session_file
@@ -132,7 +131,8 @@ if __name__ == "__main__":
     # TODO read_cfg
     with open(sessions, 'r+') as session_file:
         base_review = get_review_notes(session_file.readlines(), date.today())
-        if len(base_review) <= 8:
+        # TODO What if base_review == 0 ?
+        if len(base_review) < 8:
             print("Few notes are to review today, adding new ones from vault...")
             base_review += add_note(8-len(base_review),session_file)
         else:
