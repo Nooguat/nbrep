@@ -21,7 +21,7 @@ def read_cfg(key):
     Return datetime object from delta added
 """
 def compute_date(date_value, offset):
-    date = datetime.strptime(date_value, "%d_%m")
+    date = datetime.strptime(date_value, "%d_%m_%y")
     date = date + datime.timedelta(offset)
     # TODO Remove debug
     print(date)
@@ -42,15 +42,29 @@ def get_understanding():
     elif respond in ['b', 'B', 'bad']:
         return 1.25
     else:
-        print("Sorry, input is invalid. Try o,b or g")
+        print("Sorry, input is invalid. Try b,o or g")
         # TODO Find a better way, unsure of behaviour is called too many times
         get_understanding()
 
 """
     Return n new notes from the vault
 """
-def add_note(nbr_notes=5):
-    ...
+def add_note(nbr_notes,rev_file):
+# TODO Setup case of no new notes to add
+    notes = [f for f in os.listdir(notes_dir) if os.path.isfile(os.path.join(notes_dir, f))]
+    counter = len(rev_file.readlines())+1
+    rev_notes = [f.split(':')[0] for f in rev_file.readlines()]
+    indexes = []
+    for n in notes:
+        if n not in rev_notes:
+            if counter <= nbr_notes:
+                entry = ':'.join([n,date.today().strftime('%d_%m_%y'),'0','350\n'])
+                rev_file.write(entry)
+                indexes.append(counter)
+                counter+=1
+    if len(indexes) < nbr_notes :
+        print("Not enough notes to complete order ! Write more") 
+    return indexes
 
 """
     Generate a new speed value based on the current speed, comprehension of user and how much 
@@ -58,7 +72,10 @@ def add_note(nbr_notes=5):
 """
 def update_speed(cur_speed, nb_rep, compr_ratio):
     # TODO Work on a real algorithm
-    return cur_speed * ( compr_ratio // (5/nb_rep))
+    cur_speed = int(cur_speed)
+    nb_rep = int(nb_rep)
+    cur_speed *= ( compr_ratio // (5/nb_rep))
+    return str(cur_speed)
 
 
 """
@@ -67,10 +84,14 @@ def update_speed(cur_speed, nb_rep, compr_ratio):
     week of the current date
 """
 def get_review_notes(notes, date):
+    # TODO This should be more flexible
     res = []
     index = 0
     for note in notes:
-        note_date = datetime.strptime(note.split(':')[1], "%d_%m")
+        if ':' not in note:
+            print('this line is not well formatted, skipping...')
+            continue
+        note_date = datetime.strptime(note.split(':')[1], "%d_%m_%y").date()
         # TODO Notes before the current time should be splitted along the next week
         if note_date == date:
             res.append(index)
@@ -83,23 +104,25 @@ def get_review_notes(notes, date):
     Controls the daily session. Takes an array of notes in argument and read them one by one
 """    
 def session(notes_index, session_file):
+    print(session_file)
     for index in notes_index:
+        print(session_file[index])
         values = session_file[index].split(':')
         # TODO Replace 5 by value in config
         date = values[1]
         file = values[0]
         nbr_seen = values[2]
         speed = values[3]
-        if nbr_seen >= 5:
+        if int(nbr_seen) >= 5:
             print("This note has been reviewed a lot ! Please update knowledge graph when review is finished")
 
-        command = "speedread " + file + " -w " + speed
+        command = "speedread " + notes_dir + file + " -w " + speed
         os.system(command)
+        nbr_seen += 1
         speed = update_speed(speed, nbr_seen, get_understanding())
         # TODO Create real model
         date = compute_date(date, (nbr_seen//10)*13).strftime("%d_%m")
         # TODO Find how the session file is updated with those new values + removing the one before
-        nbr_seen += 1
         n_review = ':'.join([file, date,nbr_seen, ])
         session_file[index] = n_review
     print("Review is done for today !")
@@ -108,7 +131,14 @@ def session(notes_index, session_file):
 if __name__ == "__main__":
     # TODO read_cfg
     with open(sessions, 'r+') as session_file:
-        n_file = session(get_review_notes(session_file.readlines(), date.today()), session_file.readlines())
+        base_review = get_review_notes(session_file.readlines(), date.today())
+        if len(base_review) <= 8:
+            print("Few notes are to review today, adding new ones from vault...")
+            base_review += add_note(8-len(base_review),session_file)
+        else:
+            base_review += add_note(2, session_file)
+    with open(sessions, 'r+') as session_file:
+        n_file = session(base_review, session_file.readlines())
         session_file.write('\n'.join(n_file))
 
         
