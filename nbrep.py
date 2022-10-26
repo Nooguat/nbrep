@@ -1,10 +1,13 @@
 import os
 from datetime import date,datetime,timedelta
 from random import randint
+from math import sqrt
 
 # TODO Implement the read_cfg fonction
+# TODO Follow the XDG_CURRENT... var thing
 sessions = "/home/gsd/.sessions"
 notes_dir = "/home/gsd/.nb/home/"
+# config_file = "/home/gsd/.sessions_config"
 # Each line of the session file is made as filename:date:nb_rev_done:cur_speed
 
 if os.name not in ['Linux', 'posix']:
@@ -35,11 +38,11 @@ def get_understanding():
     respond = input("How well did you understood the note ? ")
     # TODO Implement the read_cfg function
     if respond in ['g', 'good', 'G']:
-        return 2
+        return 1.75
     elif respond in ['o', 'ok','O']:
-        return 1.5
-    elif respond in ['b', 'B', 'bad']:
         return 1.25
+    elif respond in ['b', 'B', 'bad']:
+        return 0.75
     else:
         print("Sorry, input is invalid. Try b,o or g")
         # TODO Find a better way, unsure of behaviour is called too many times
@@ -70,11 +73,12 @@ def add_note(nbr_notes,rev_file):
     time this note has been reviewed. Not using a real algorithm for the moment
 """
 def update_speed(cur_speed, nb_rep, compr_ratio):
-    # TODO Work on a real algorithm
     cur_speed = int(cur_speed)
     nb_rep = int(nb_rep)
-    cur_speed *= ( compr_ratio // (5/nb_rep))
+    # Set interval for the speed value between 350 and 1000
+    cur_speed = max(min(sqrt(pow(nb_rep,2) * compr_ratio),1000),350)
     return str(cur_speed)
+
 
 
 """
@@ -86,17 +90,20 @@ def get_review_notes(notes, date):
     # TODO This should be more flexible
     res = []
     index = 0
+    outdated_notes = []
     for note in notes:
         if ':' not in note:
             print('this line is not well formatted, skipping...')
             continue
         note_date = datetime.strptime(note.split(':')[1], "%d_%m_%y").date()
-        # TODO Notes before the current time should be splitted along the next week
         if note_date == date:
             res.append(index)
         elif note_date < date:
-            print("This note should have been reviewed before, adding it along the next week")
+            outdated_notes.append(index)
         index += 1
+    if len(outdated_notes) != 0:
+        print(f"{len(outdated_notes)} notes should have been reviewed before, what should be done ?")
+        # TODO Check what to do with those notes
     return res
 
 """
@@ -121,7 +128,7 @@ def session(notes_index, session_file):
         # TODO Create real model
         date = compute_date(date, (int(nbr_seen)//10)*13).strftime("%d_%m_%y")
         # TODO Find how the session file is updated with those new values + removing the one before
-        n_review = ':'.join([file, date,nbr_seen, ])
+        n_review = ':'.join([file, date,nbr_seen, speed])
         print(n_review)
         session_file[index] = n_review
     print("Review is done for today !")
@@ -131,7 +138,9 @@ if __name__ == "__main__":
     # TODO read_cfg
     with open(sessions, 'r+') as session_file:
         base_review = get_review_notes(session_file.readlines(), date.today())
-        # TODO What if base_review == 0 ?
+        if len(base_review) == 0:
+            print("Nothing to review today !")
+            exit(0)
         if len(base_review) < 8:
             print("Few notes are to review today, adding new ones from vault...")
             base_review += add_note(8-len(base_review),session_file)
