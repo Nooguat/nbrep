@@ -114,8 +114,8 @@ def session(notes_index, session_file):
         print(session_file[index])
         values = session_file[index].split(':')
         # TODO Replace 5 by value in config
-        date = values[1]
         file = values[0]
+        date = values[1]
         nbr_seen = values[2]
         speed = values[3]
         if int(nbr_seen) >= 5:
@@ -146,6 +146,7 @@ if __name__ == "__main__":
             base_review += add_note(8-len(base_review),session_file)
         else:
             base_review += add_note(2, session_file)
+    # Needed to update file content ; check if could be done another way
     with open(sessions, 'r+') as session_file:
         n_file = session(base_review, session_file.readlines())
         session_file.write('\n'.join(n_file))
